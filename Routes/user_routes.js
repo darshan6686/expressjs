@@ -1,23 +1,25 @@
 const express = require('express');
 const userRoute = express.Router();
+const {verifyToken} = require('../Helpers/tokenVerify')
 const {
     signUp,
     login,
     getUser,
-    specificUser,
-    putuser,
-    deleteUser
+    chagePassword,
+    putuser
 } = require('../Controller/user_controller');
 
 userRoute.post('/signup', signUp);
 
 userRoute.post('/login', login);
 
-// userRoute.get('/', getUser);
+userRoute.get('/profile', verifyToken, getUser);
 
 // userRoute.get('/:id', specificUser);
 
-// userRoute.put('/:id', putuser);
+userRoute.put('/update-profile', verifyToken, putuser);
+
+userRoute.put('/changepassword', verifyToken, chagePassword)
 
 // userRoute.delete('/:id', deleteUser);
 

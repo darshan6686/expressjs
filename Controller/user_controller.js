@@ -1,5 +1,6 @@
 const userModel = require('../Model/user_model');
 const bcrypt = require('bcrypt');
+let jwt = require('jsonwebtoken');
 
 exports.signUp = async (req,res) => {
     try{
@@ -34,7 +35,11 @@ exports.login = async (req,res) => {
         if(!checkPassword){
             return res.json({message: "password is not matched"});
         }
-        res.json(user);
+        let playload = {
+            userId: user._id
+        }
+        let token = jwt.sign(playload,process.env.SECRCT_KEY);
+        res.json({token, message: "Login success"});
     }
     catch(err){
         console.log(err);
@@ -44,14 +49,37 @@ exports.login = async (req,res) => {
 
 exports.getUser = async (req,res) => {
     try{
-        let user = await userModel.find({isDelete: false});
-        res.json(user);
+        // let user = await userModel.find({isDelete: false});
+        res.json(req.user);
     }
     catch(err){
         console.log(err);
         res.status(500).json({message: "Internal server error..."});
     }
 }
+
+exports.chagePassword = async (req,res) => {
+    const { currentPassword, newPassword, confamePassword} = req.body;
+
+    let checkPassword = await bcrypt.compare(currentPassword, req.user.password);
+    if(!checkPassword){
+        return res.json({message:"your Password is wrong."})
+    }
+    if(newPassword !== confamePassword){
+        return res.json({message:"Your new password and confirm password are different."})
+    }
+    let hashedPassword = await bcrypt.hash(confamePassword, 10);
+    let user = await userModel.findByIdAndUpdate(
+        req.user._id,
+        {
+            $set: {"password": hashedPassword}
+        },
+        {new: true}
+    )
+    res.json({user, message: "successfully change the password"});
+}
+
+
 
 exports.specificUser = async (req,res) => {
     try{
@@ -67,13 +95,8 @@ exports.specificUser = async (req,res) => {
 
 exports.putuser = async (req,res) => {
     try{
-        let id = req.params.id;
-        let user = await userModel.findOne({_id:id, isDelete:false});
-        if(!user){
-            return res.json({message: "user not found! ..."});
-        }
-        user = await userModel.findOneAndUpdate(
-            {_id: id},
+        let user = await userModel.findByIdAndUpdate(
+            req.user._id,
             {
                 $set: { ...req.body }
             },
